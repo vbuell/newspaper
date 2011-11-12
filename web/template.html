@@ -1,0 +1,375 @@
+<html>
+<head>
+<style type="text/css">
+
+.column {
+    padding: 10px;
+}
+
+#wrapper {
+    margin: 0px 100px;
+}
+
+.wide, .thin {
+    clear: both;
+}
+
+body {
+    -khtml-user-select: none;
+    margin: 30px;
+    margin-right: 20px;
+    margin-top: 13px;
+    margin-bottom: 10px;
+    background: transparent;
+    overflow-x: none;
+    margin-left: 25px;
+    text-shadow: rgba(255, 255, 255, 0.5) 0px 1px 0px;
+    color: #444;
+}
+
+.article-title {
+    text-shadow: rgba(255, 255, 255, 0.5) 0px 1px 0px;
+    font: bold 18px "Georgia", "Times New Roman", "Times", serif;
+    padding: 0px;
+    padding-right: 18px;
+    margin: 0px;
+    background: url(../images/arrow-n.png) center right no-repeat;
+    color: #333;
+    text-decoration: none;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    position: relative; /*this is the key*/
+    z-index: 24;
+}
+
+.article-title:hover {
+    color: #3875d7;
+    text-decoration: none;
+    background-image: url(../images/arrow-o.png);
+    z-index: 25;
+}
+
+.article-title:active {
+    color: #3562a1;
+    background-image: url(../images/arrow-d.png);
+    text-shadow: rgba(204, 204, 204, 0.75) 0px 1px 0px;
+}
+
+.article-title-b {
+    margin-bottom: 0.25em;
+}
+
+.article-title span {
+    display: none
+}
+
+.article-title:hover span {
+    /*the span will display just on :hover state*/
+    display: block;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 15em;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    color: #000;
+    text-align: center;
+    font: 10px Verdana, "Georgia", "Times New Roman", "Times", serif;
+    border-radius: 5px 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+    -webkit-box-shadow: 1px 1px rgba(0, 0, 0, 0.1);
+    -moz-box-shadow: 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+a {
+    color: #2e66ce;
+    text-shadow: none;
+}
+
+a:hover {
+    color: #FFFFFF;
+    /*	padding-left: 2px;
+     margin-left: -2px;
+     padding-right: 2px;
+     margin-right: -2px;*/
+    background-color: #2e66ce;
+    -webkit-border-radius: 1px;
+    text-decoration: none;
+}
+
+a:active {
+    background-color: #274f98;
+}
+
+p {
+    margin: 1em 0;
+}
+
+.article {
+    -khtml-user-select: auto;
+    padding-top: 1.25em;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    color: #444;
+    text-align: left;
+    font: 12px Verdana, "Georgia", "Times New Roman", "Times", serif;
+    line-height: 1.3em;
+    padding-bottom: 1em;
+    /*column-count:2;			*//* this tells the browser to render 3 columns - future proof */
+    /*column-width:10em;		*//* this sets the width of each column - future proof */
+    /*column-gap:2em;			*//* this sets the spacing/gap between each column - future proof */
+    /*-moz-column-count:2;    *//* this tells the browser to render 3 columns - Mozilla specific prefix */
+    /*-moz-column-width:10em; *//* this sets the width of each column - Mozilla specific prefix */
+    /*-moz-column-gap:2em;	*//* this sets the spacing/gap between each column - Mozilla specific prefix */
+    /*-webkit-column-count:2;	*//* this tells the browser to render 3 columns - Webkit specific prefix */
+    /*-webkit-column-width:100%; *//* this sets the width of each column - Webkit specific prefix */
+    /*-webkit-column-gap:2em;	*//* this sets the spacing/gap between each column - Webkit specific prefix */
+}
+
+.article img {
+    max-width: 50%;
+    height: auto;
+    margin: 1em 1em 1em 0;
+    display: table;
+    float: left;
+    clear: left;
+}
+
+.article p {
+    margin-top: 0px;
+}
+
+.article blockquote {
+    margin: 0px;
+    padding: 0px;
+    color: gray;
+    font-style: italic;
+}
+
+#subscriptions {
+    z-index: 99;
+    position: absolute;
+    top: 12px;
+    left: -6px;
+    /*width: 70px;*/
+    /*height: 20px;*/
+    align: top;
+    text-align: center;
+    font: 24px "Times New Roman", "Times", serif;
+    background-color: #aa0000;
+    color: #ffffff;
+    -webkit-transform: rotate(-20deg) scale(0.75);
+    -webkit-transform-origin: top left;
+}
+
+.tag {
+    cursor: pointer;
+}
+
+.tag:hover {
+    cursor: pointer;
+    background-color: #eeeecc;
+}
+
+h1 {
+    font-size: 1.6em;
+    border-bottom: 1px solid #ccc;
+    padding: 5px 0 5px 0;
+}
+
+h2 {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+#wrapper {
+    margin: 0 10px 10px;
+    font-size: 1.2em;
+    line-height: 1.4em;
+    text-align: left;
+    overflow: hidden;
+}
+
+div.row {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+div.column {
+    float: left;
+    /*width: 35%;*/
+}
+
+div.column div.content {
+    margin: 5px;
+    padding: 5px;
+}
+
+div.article-section:hover {
+    background-color: #fffff0;
+}
+
+#content, #content2 {
+    background-color: #fee;
+    /*padding-bottom: 32767px;*/
+    /*margin-bottom: -32767px;*/
+}
+
+#menu {
+    background-color: #eef;
+    /*padding-bottom: 32767px;*/
+    /*margin-bottom: -32767px;*/
+    width: 30%;
+}
+
+#menu ul.submenu {
+    float: left;
+    list-style: none;
+    padding: 0;
+    margin: 0 20px 10px 0;
+    width: 200px;
+}
+
+</style>
+
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.min.js"></script>
+
+<script type="text/javascript" src="http://welcome.totheinter.net/autocolumn/autocolumn.js"></script>
+
+<script type="text/javascript">
+
+    var timeout;
+
+    function send(msg) {
+        document.title = "null";
+        document.title = msg;
+    }
+
+    function unslide(name) {
+        var element = $("div[name='" + name + "']")
+        element.fadeTo("fast", 1.0);
+        element.slideDown();
+    }
+
+    function hide() {
+        $('#layer').hide();
+    }
+
+    $(document).ready(function() {
+
+        $('div.article-title').click(function(e) {
+            send("showbrowser#" + $(this).attr('href'));
+            e.cancelBubble = true;
+            if (e.stopPropagation) e.stopPropagation();
+        });
+
+        $('div.article-section').click(function(e) {
+            button = (event.which < 2) ? "LEFT" :
+                    ((event.which == 2) ? "MIDDLE" : "RIGHT");
+//            alert(button);
+            //			e.preventDefault();
+            var $parent = $(this);
+            if (button == "LEFT") {
+                //            parent.animate({'backgroundColor':'#acfbac'}, 300);
+                $parent.fadeTo("normal", 0.33);
+                $parent.slideUp();
+                send("markasread#" + $parent.attr('name'));
+            }
+            else if (button == "MIDDLE") {
+                $parent.css("background-image", "url(http://scrapmania.ru/images/230010.jpg)");
+                $parent.css("background-repeat", "no-repeat");
+//                $parent.css("background-size","100% 100%");
+                $parent.css("background-position", "center");
+//                $parent.css("opacity","0.4");
+//                $parent.css("filter","alpha(opacity=40)");
+
+            }
+        });
+
+        $('span.tag').click(function(e) {
+            send("tag#" + $(this).attr('href'));
+        });
+
+        $('#logout').click(function(e) {
+            send("logout#");
+        });
+
+        $('#subscriptions').click(function(e) {
+            //get the position of the placeholder element
+            var $parent = $('#tags_menu_parent')
+            var pos = $parent.offset();
+            var width = $parent.width();
+            //show the menu directly over the placeholder
+            $("#layer").css({ "left": (pos.left) + "px", "top":pos.top + "px", "width":width }).show();
+//            $('#layer').show();
+        });
+
+        $('#tags_menu').mouseout(function() {
+            timeout = setTimeout("hide()", 100);
+        });
+
+        $('#layer').mouseover(function() {
+            clearTimeout(timeout);
+        });
+
+        $('#layer').mouseout(function() {
+            timeout = setTimeout("hide()", 100);
+        });
+
+    });
+</script>
+
+
+<title>Page</title>
+
+<div id="subscriptions">&nbsp;Subscriptions</div>
+
+<div id="layer"
+     style="z-index:90; display: none; position: absolute; top: 10px; left: 300px; text-align:left; font-size: 10px; background-color: #fffff0;">
+    %tags%
+</div>
+
+<div id="logout"
+     style="position: absolute; top: 10px; right: 18px; background-color: #fffff0; font: 10px 'Georgia', 'Times New Roman', 'Times', serif;">
+    <span class="tag">Log&nbsp;out</span>
+</div>
+
+</head>
+<body>
+<table style="width: 100%; margin-bottom: 1em;">
+    <tr id="tags_menu_parent">
+        <td style="font: 6px 'Georgia', 'Times New Roman', 'Times', serif;width:5%;">Free rss and atom reader</td>
+        <td style="font: bold 38px 'Georgia', 'Times New Roman', 'Times', serif;text-align:center;"><span class="tag"
+                                                                                                          href="default">News!</span>
+        </td>
+        <td style="font: 8px 'Georgia', 'Times New Roman', 'Times', serif;text-align:right;width:5%;">&nbsp;</td>
+    </tr>
+</table>
+
+<table style="border-top: 1px solid;border-bottom: 1px solid;width: 100%; margin-bottom: 1em; border-color: #555;">
+    <tr>
+        <td style="font-size: 10px" width="50%" id="tags_menu">%feed_name%</td>
+        <td style="text-align:center;font-size: 10px;" nowrap>19 Jul 2010</td>
+        <td style="text-align:right;font-size: 10px;" width="50%">TODAY</td>
+    </tr>
+</table>
+
+<div id="wrapper">
+    <div class="wide">
+
+        %entries%
+
+        <br>
+
+        %next%
+
+    </div>
+</div>
+
+<div style="clear:both;">&nbsp;</div>
+
+</body>
+</html>
