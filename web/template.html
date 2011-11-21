@@ -262,8 +262,12 @@ div.article-section:hover {
 
         $('div.article-title').click(function(e) {
             send("showbrowser#" + $(this).attr('href'));
-            e.cancelBubble = true;
-            if (e.stopPropagation) e.stopPropagation();
+            var evt = (navigator.appName == "Netscape" ? e : window.event);
+            var ctrlPressed  = evt.ctrlKey;
+            if (!ctrlPressed) {
+                e.cancelBubble = true;
+                if (e.stopPropagation) e.stopPropagation();
+            }
         });
 
         $('div.article-section').click(function(e) {
