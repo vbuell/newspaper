@@ -5,6 +5,8 @@ import os
 import datetime
 import logging
 import urllib2
+import sys
+from optparse import OptionParser
 
 import pygtk
 pygtk.require('2.0')
@@ -16,6 +18,8 @@ import pango
 import webbrowser
 
 from googlereaderapi import GoogleReader
+
+VERSION = "0.91"
 
 
 class Preferences:
@@ -35,6 +39,8 @@ class Preferences:
     windowY = 200
     greader_login = None
     greader_pass = None
+    reverse = False
+    keywords = None
 
     @staticmethod
     def load():
@@ -87,7 +93,11 @@ class News:
             logging.debug("Logging in as: " + str(Preferences.greader_login))
             self.google_reader = GoogleReader(Preferences.greader_login, Preferences.greader_pass)
             self.populate_feeds()
-            self.title_changed(None, None, "tag#default")
+            if Preferences.keywords:
+                print "Keywords", Preferences.keywords
+                self.title_changed(None, None, "search#" + Preferences.keywords)
+            else:
+                self.title_changed(None, None, "tag#default")
         except urllib2.HTTPError:
             logging.exception("Forbidden")
             self.show_login(True)
@@ -114,14 +124,16 @@ class News:
                 logging.exception("Can't mark as read")
                 self.web_send('unslide("'+rest+'")')
         elif title.startswith("showbrowser#"):
-#            print id
-            webbrowser.open(rest, new = 1)
+            webbrowser.open_new_tab(rest)#, new = 0, autoraise = False)
         elif title.startswith("tag#"):
             if '#' in rest:
                 chunks = rest.split('#')
                 html_feed_page = self.return_entries_of_feed(chunks[0], continuation=chunks[1])
             else:
                 html_feed_page = self.return_entries_of_feed(rest)
+            self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
+        elif title.startswith("search#"):
+            html_feed_page = self.search_keywords(rest)
             self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
         elif title.startswith("login#"):
             Preferences.greader_login = rest[:rest.find("#")]
@@ -142,7 +154,7 @@ class News:
         about = gtk.AboutDialog()
         about.set_transient_for(self.window)
         about.set_program_name("News!")
-        about.set_version("0.90")
+        about.set_version(VERSION)
         about.set_comments("News! :: Minimalistic Google Reader frontend")
         about.set_copyright("(c) 2011 Volodymyr Buell")
         about.set_website("http://code.google.com/p/newspaper/")
@@ -286,13 +298,31 @@ class News:
                     font_style = 'bold'
                     self.html_tags += '<span class="tag" href="'+feed['id']+'">' + feed_label + "&nbsp;</span>"
 
-    def return_entries_of_feed(self, id_feed, continuation=None):
+    def return_entries_of_feed(self, id_feed, continuation=None, from_past_to_now=Preferences.reverse):
         """Obtains the entries of the selected feed"""
         if id_feed == "default":
-            entries = self.google_reader.get_reading_list(from_past_to_now=False, continuation=continuation)
+            entries = self.google_reader.get_reading_list(from_past_to_now=from_past_to_now, continuation=continuation)
         else:
-            entries = self.google_reader.get_entries(id_feed, from_past_to_now=False, continuation=continuation)
+            entries = self.google_reader.get_entries(id_feed, from_past_to_now=from_past_to_now, continuation=continuation)
 
+        return self.render_as_html(entries, id_feed)
+
+    def is_read(self, categories):
+        for category in categories:
+            if category.endswith('state/com.google/read'):
+                return True
+        return False
+
+    def search_keywords(self, keywords):
+        entries = self.google_reader.search(keywords)
+
+        # Filter out read items
+        items = [row for row in entries['items'] if not self.is_read(row['categories'])]
+        entries['items'] = items
+
+        return self.render_as_html(entries)
+
+    def render_as_html(self, entries, id_feed='NONE'):
         f = open('./web/template.html', 'r')
         html = f.read()
 
@@ -360,6 +390,16 @@ if __name__ == "__main__":
     FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     logging.info("News! started...")
+
+    parser = OptionParser()
+    parser.add_option("-r", "--reverse", dest="reverse",
+                      help="from past to now", default=0)
+
+    (options, args) = parser.parse_args(args=sys.argv)
+
+    Preferences.reverse = options.reverse
+    if args[1:]:
+        Preferences.keywords = ' '.join(args[1:])
 
     news = News()
     gtk.main()

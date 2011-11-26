@@ -80,7 +80,7 @@ class Article(object):
 
 class GoogleReader(object):
     def __init__(self, username, password):
-        self.client = 'read-me/0.1.0'
+        self.client = 'news'
         self.username = username
         self.email = username
         self.password = password
@@ -122,6 +122,7 @@ class GoogleReader(object):
                                       option: 'user/-/state/com.google/%s' % (action),
                                       'ac': 'edit',
                                       'T': self.token})
+        print post_data
         url = 'http://www.google.com/reader/api/0/edit-tag'
         request = urllib2.Request(url, post_data, self.header)
         try:
@@ -276,3 +277,36 @@ class GoogleReader(object):
             obj = simplejson.loads(f.read())
             return obj
         return None
+
+    def search(self, keywords):
+        # Search
+        url = 'http://www.google.com/reader/api/0/search/items/ids?%s'
+        get_data = urllib.urlencode({'q': keywords,
+                                     'num': 1000,
+                                     'output': 'json',
+                                     'ck': int(time.time()),
+                                     'client': self.client})
+        # Doing GET
+        reader_url = url % get_data
+        request = urllib2.Request(reader_url, None, self.header)
+        f = urllib2.urlopen(request)
+        entryids = []
+        if f:
+            obj = simplejson.loads(f.read())
+            entryids = [c['id'] for c in obj['results']]
+
+        p = {'i': entryids,
+             'T': [self.token]}
+        post_data = urllib.urlencode([(k, v) for k, vs in p.items() for v in vs])
+
+        url = 'http://www.google.com/reader/api/0/stream/items/contents?%s'
+        get_data = urllib.urlencode({'likes': 'false',
+                                     'comments': 'false',
+                                     'ck': int(time.time()),
+                                     'client': self.client})
+        reader_url = url % get_data
+        request = urllib2.Request(reader_url, post_data, self.header)
+        f = urllib2.urlopen(request)
+        obj = simplejson.loads(f.read())
+
+        return obj
