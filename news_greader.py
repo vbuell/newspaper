@@ -128,9 +128,9 @@ class News:
         elif title.startswith("tag#"):
             if '#' in rest:
                 chunks = rest.split('#')
-                html_feed_page = self.return_entries_of_feed(chunks[0], continuation=chunks[1])
+                html_feed_page = self.return_entries_of_feed(chunks[0], continuation=chunks[1], from_past_to_now=Preferences.reverse)
             else:
-                html_feed_page = self.return_entries_of_feed(rest)
+                html_feed_page = self.return_entries_of_feed(rest, from_past_to_now=Preferences.reverse)
             self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
         elif title.startswith("search#"):
             html_feed_page = self.search_keywords(rest)
@@ -298,7 +298,7 @@ class News:
                     font_style = 'bold'
                     self.html_tags += '<span class="tag" href="'+feed['id']+'">' + feed_label + "&nbsp;</span>"
 
-    def return_entries_of_feed(self, id_feed, continuation=None, from_past_to_now=Preferences.reverse):
+    def return_entries_of_feed(self, id_feed, continuation=None, from_past_to_now=False):
         """Obtains the entries of the selected feed"""
         if id_feed == "default":
             entries = self.google_reader.get_reading_list(from_past_to_now=from_past_to_now, continuation=continuation)
@@ -392,8 +392,8 @@ if __name__ == "__main__":
     logging.info("News! started...")
 
     parser = OptionParser()
-    parser.add_option("-r", "--reverse", dest="reverse",
-                      help="from past to now", default=0)
+    parser.add_option("-r", "--reverse", dest="reverse", action="store_true",
+                      help="from past to now", default=False)
 
     (options, args) = parser.parse_args(args=sys.argv)
 
