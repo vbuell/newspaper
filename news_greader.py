@@ -41,6 +41,7 @@ class Preferences:
     greader_pass = None
     reverse = False
     keywords = None
+    use_emailed_as_advanced_read = True
 
     @staticmethod
     def load():
@@ -120,6 +121,8 @@ class News:
 #            print id
             try:
                 self.google_reader.mark_as_read(rest, True)
+                if Preferences.use_emailed_as_advanced_read:
+                    self.google_reader.mark_as_emailed(rest, True)
             except:
                 logging.exception("Can't mark as read")
                 self.web_send('unslide("'+rest+'")')
@@ -313,12 +316,29 @@ class News:
                 return True
         return False
 
+    def is_emailed(self, categories):
+        for category in categories:
+            if category.endswith('state/com.google/tracking-emailed'):
+                return True
+        return False
+
     def search_keywords(self, keywords):
-        entries = self.google_reader.search(keywords)
+        entries = self.google_reader.search(keywords, limit=500)
+
+        logging.info("Search returned " + str(len(entries['items'])) + " items.")
 
         # Filter out read items
+#        if Preferences.use_emailed_as_advanced_read:
+#            items = [row for row in entries['items'] if not self.is_emailed(row['categories'])]
+#        else:
+#            items = [row for row in entries['items'] if not self.is_read(row['categories'])]
         items = [row for row in entries['items'] if not self.is_read(row['categories'])]
         entries['items'] = items
+
+        # Limit items
+        entries['items'] = entries['items'][:50]
+
+        logging.info("After filtering lasted " + str(len(entries['items'])) + " items.")
 
         return self.render_as_html(entries)
 

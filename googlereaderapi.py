@@ -278,11 +278,11 @@ class GoogleReader(object):
             return obj
         return None
 
-    def search(self, keywords):
+    def search(self, keywords, limit=1000):
         # Search
         url = 'http://www.google.com/reader/api/0/search/items/ids?%s'
         get_data = urllib.urlencode({'q': keywords,
-                                     'num': 1000,
+                                     'num': limit,
                                      'output': 'json',
                                      'ck': int(time.time()),
                                      'client': self.client})
@@ -294,6 +294,10 @@ class GoogleReader(object):
         if f:
             obj = simplejson.loads(f.read())
             entryids = [c['id'] for c in obj['results']]
+
+        logging.info("googlereaderapi: Search result: " + str(len(entryids)))
+
+        # FIXME: We need to implement paging. Google can retreive only 250 items at once.
 
         p = {'i': entryids,
              'T': [self.token]}
