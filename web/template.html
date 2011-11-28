@@ -252,9 +252,9 @@ div.article-section:hover {
             var $parent = $(this);
             if (button == "LEFT") {
                 //            parent.animate({'backgroundColor':'#acfbac'}, 300);
-                $parent.fadeTo("normal", 0.33);
-                $parent.slideUp();
                 send("markasread#" + $parent.attr('name'));
+                $parent.fadeTo("fast", 0.33);
+                $parent.slideUp();
             }
             else if (button == "MIDDLE") {
                 $parent.css("background-image", "url(http://scrapmania.ru/images/230010.jpg)");
@@ -268,7 +268,12 @@ div.article-section:hover {
         });
 
         $('span.tag').click(function(e) {
-            send("tag#" + $(this).attr('href'));
+            if ($(this).attr('href')) {
+                send("tag#" + $(this).attr('href'));
+            }
+            else {
+                send("next#");
+            }
         });
 
         $('#logout').click(function(e) {

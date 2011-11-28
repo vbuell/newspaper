@@ -7,6 +7,7 @@ import logging
 import urllib2
 import sys
 from optparse import OptionParser
+from datetime import date
 
 import pygtk
 pygtk.require('2.0')
@@ -77,6 +78,89 @@ class Preferences:
 
         logging.debug("Preferences saved.")
 
+class Query:
+
+    def next(self):
+        pass
+
+    def has_next(self):
+        pass
+
+class TopicQuery(Query):
+
+    def __init__(self, google_reader, topic, from_past_to_now=False):
+        self.topic = topic
+        self.google_reader = google_reader
+        self._has_next = False
+        self.continuation = None
+        self.from_past_to_now = from_past_to_now
+
+    def next(self):
+        if self.topic == "default":
+            entries = self.google_reader.get_reading_list(
+                from_past_to_now=self.from_past_to_now, continuation=self.continuation)
+        else:
+            entries = self.google_reader.get_entries(
+                self.topic, from_past_to_now=self.from_past_to_now, continuation=self.continuation)
+
+        if 'continuation' in entries:
+            self._has_next = True
+            self.continuation = entries['continuation']
+        else:
+            self._has_next = False
+            self.continuation = None
+        return entries
+
+    def has_next(self):
+        return self._has_next
+
+
+class SearchQuery(Query):
+
+    def __init__(self, google_reader, keywords, paging_size=20):
+        self.keywords = keywords
+        self.google_reader = google_reader
+        self.entries_ids = self.google_reader.search(keywords, limit=1000)
+        self.page = 0
+        self.page_size = paging_size
+        logging.info("Search returned " + str(len(self.entries_ids)) + " items.")
+
+    def is_read(self, categories):
+        for category in categories:
+            if category.endswith('state/com.google/read'):
+                return True
+        return False
+
+    def is_emailed(self, categories):
+        for category in categories:
+            if category.endswith('state/com.google/tracking-emailed'):
+                return True
+        return False
+
+    def next(self):
+        start = self.page * self.page_size
+        end = (self.page + 1) * self.page_size
+
+        entries = self.google_reader.get_items_by_ids(self.entries_ids[start:end])
+
+        # Filter out read items
+        if Preferences.use_emailed_as_advanced_read:
+            items = [row for row in entries['items'] if not self.is_emailed(row['categories'])]
+        else:
+            items = [row for row in entries['items'] if not self.is_read(row['categories'])]
+#        items = [row for row in entries['items'] if not self.is_read(row['categories'])]
+        entries['items'] = items
+
+        self.page += 1
+
+        logging.info("After filtering lasted " + str(len(entries['items'])) + " items.")
+
+        return entries
+
+    def has_next(self):
+        logging.info("" + str(len(self.entries_ids)) + " >= " + str(self.page * self.page_size))
+        return len(self.entries_ids) >= self.page * self.page_size
+
 class News:
 
     def __init__(self):
@@ -110,13 +194,12 @@ class News:
         return False
 
     def title_changed(self, widget, frame, title):
-        if title is None:
+        if title is None or "#" not in title:
             return
-        print "COMMAND", title
+        logging.debug("COMMAND: " + str(title))
         command = title[:title.find("#")]
         rest = title[title.find("#")+1:]
-        print "Command form UI: " + command + rest
-        logging.debug("Command form UI: " + command + rest)
+        logging.debug("Command form UI: " + command + " # " + rest)
         if title.startswith("markasread#"):
 #            print id
             try:
@@ -136,7 +219,11 @@ class News:
                 html_feed_page = self.return_entries_of_feed(rest, from_past_to_now=Preferences.reverse)
             self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
         elif title.startswith("search#"):
-            html_feed_page = self.search_keywords(rest)
+            self.query = SearchQuery(self.google_reader, rest)
+            entries = self.query.next()
+            while self.query.has_next() and not entries['items']:
+                entries = self.query.next()
+            html_feed_page = self.render_as_html(entries, has_next=self.query.has_next())
             self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
         elif title.startswith("login#"):
             Preferences.greader_login = rest[:rest.find("#")]
@@ -146,6 +233,12 @@ class News:
             Preferences.greader_login = None
             Preferences.greader_pass = None
             self.show_login(False)
+        elif title.startswith("next#"):
+            entries = self.query.next()
+            while self.query.has_next() and not entries['items']:
+                entries = self.query.next()
+            html_feed_page = self.render_as_html(entries, has_next=self.query.has_next())
+            self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
 
     def web_send(self, msg):
         if msg:
@@ -310,39 +403,7 @@ class News:
 
         return self.render_as_html(entries, id_feed)
 
-    def is_read(self, categories):
-        for category in categories:
-            if category.endswith('state/com.google/read'):
-                return True
-        return False
-
-    def is_emailed(self, categories):
-        for category in categories:
-            if category.endswith('state/com.google/tracking-emailed'):
-                return True
-        return False
-
-    def search_keywords(self, keywords):
-        entries = self.google_reader.search(keywords, limit=500)
-
-        logging.info("Search returned " + str(len(entries['items'])) + " items.")
-
-        # Filter out read items
-#        if Preferences.use_emailed_as_advanced_read:
-#            items = [row for row in entries['items'] if not self.is_emailed(row['categories'])]
-#        else:
-#            items = [row for row in entries['items'] if not self.is_read(row['categories'])]
-        items = [row for row in entries['items'] if not self.is_read(row['categories'])]
-        entries['items'] = items
-
-        # Limit items
-        entries['items'] = entries['items'][:50]
-
-        logging.info("After filtering lasted " + str(len(entries['items'])) + " items.")
-
-        return self.render_as_html(entries)
-
-    def render_as_html(self, entries, id_feed='NONE'):
+    def render_as_html(self, entries, id_feed='NONE', has_next=False):
         f = open('./web/template.html', 'r')
         html = f.read()
 
@@ -357,23 +418,29 @@ class News:
             else:
                 content = row['title']
 
+            entry_info = ''
             if 'origin' in row and 'title' in row['origin']:
-                feed_name = row['origin']['title']
-            else:
-                feed_name = '&nbsp;'
+                entry_info += row['origin']['title']
+
+            if 'published' in row:
+                entry_info += " : " + str(date.fromtimestamp(row['published']))
+
             if 'alternate' in row and row['alternate'] and 'href' in row['alternate'][0]:
                 url = row['alternate'][0]['href']
                 html_entries = html_entries + \
                                '<div class="article-section" name="'+str(row['id'])+'">' + \
-                               '<div class="article-title" href="'+url+'">' + row['title'] + '<span>'+feed_name+'</span></div><div class="article">' + content + '</div><br></div>'
+                               '<div class="article-title" href="'+url+'">' + row['title'] + '<span>'+entry_info+'</span></div><div class="article">' + content + '</div><br></div>'
             else:
                 html_entries = html_entries + \
                                '<div class="article-section" name="'+str(row['id'])+'">' + \
                                '<div class="article-title">' + row['title'] + '</div><div class="article">' + content + '</div><br></div>'
 
-        if 'continuation' in entries:
-            continuation = entries['continuation']
-            html_continuation = '<span class="tag" href="'+id_feed + '#'+continuation+'">Next...</span>'
+        if has_next:
+            if 'continuation' in entries:
+                continuation = entries['continuation']
+                html_continuation = '<span class="tag" href="'+id_feed + '#'+continuation+'">Next...</span>'
+            else:
+                html_continuation = '<span class="tag">Next...</span>'
         else:
             html_continuation = ''
 

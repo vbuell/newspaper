@@ -297,8 +297,10 @@ class GoogleReader(object):
 
         logging.info("googlereaderapi: Search result: " + str(len(entryids)))
 
-        # FIXME: We need to implement paging. Google can retreive only 250 items at once.
+        return entryids
 
+    def get_items_by_ids(self, entryids):
+        # FIXME: We need to implement paging. Google can retreive only 250 items at once.
         p = {'i': entryids,
              'T': [self.token]}
         post_data = urllib.urlencode([(k, v) for k, vs in p.items() for v in vs])
