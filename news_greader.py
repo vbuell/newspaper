@@ -120,7 +120,7 @@ class SearchQuery(Query):
     def __init__(self, google_reader, keywords, paging_size=20):
         self.keywords = keywords
         self.google_reader = google_reader
-        self.entries_ids = self.google_reader.search(keywords, limit=1000)
+        self.entries_ids = self.google_reader.search(keywords, limit=10000)
         self.page = 0
         self.page_size = paging_size
         logging.info("Search returned " + str(len(self.entries_ids)) + " items.")
@@ -401,7 +401,7 @@ class News:
         else:
             entries = self.google_reader.get_entries(id_feed, from_past_to_now=from_past_to_now, continuation=continuation)
 
-        return self.render_as_html(entries, id_feed)
+        return self.render_as_html(entries, id_feed, has_next=True)
 
     def render_as_html(self, entries, id_feed='NONE', has_next=False):
         f = open('./web/template.html', 'r')
