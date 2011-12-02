@@ -21,6 +21,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import collections
 
 __author__ = 'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'
 __date__ = '$13/03/2011'
@@ -118,7 +119,14 @@ class GoogleReader(object):
             option = 'a'
         else:
             option = 'r'
-        post_data = urllib.urlencode({'i': entryid,
+        if isinstance(entryid, collections.Iterable):
+            p = {'i': entryid,
+                                      option: ['user/-/state/com.google/%s' % (action)],
+                                      'ac': ['edit'],
+                                      'T': [self.token]}
+            post_data = urllib.urlencode([(k, v) for k, vs in p.items() for v in vs])
+        else:
+            post_data = urllib.urlencode({'i': entryid,
                                       option: 'user/-/state/com.google/%s' % (action),
                                       'ac': 'edit',
                                       'T': self.token})

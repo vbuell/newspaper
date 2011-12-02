@@ -123,6 +123,7 @@ class SearchQuery(Query):
         self.entries_ids = self.google_reader.search(keywords, limit=10000)
         self.page = 0
         self.page_size = paging_size
+        self.entries = None
         logging.info("Search returned " + str(len(self.entries_ids)) + " items.")
 
     def is_read(self, categories):
@@ -152,6 +153,8 @@ class SearchQuery(Query):
         entries['items'] = items
 
         self.page += 1
+
+        self.entries = entries
 
         logging.info("After filtering lasted " + str(len(entries['items'])) + " items.")
 
@@ -264,6 +267,9 @@ class News:
                 <menu action='HelpMenu'>
                  <menuitem action='About'/>
                 </menu>
+                <menu action='Action'>
+                 <menuitem action='Mark as read all'/>
+                </menu>
                </menubar>
               </ui>"""
 
@@ -271,6 +277,8 @@ class News:
         actions = [
                 ('HelpMenu', None, '_Help'),
                 ('About', gtk.STOCK_ABOUT, '_About', None, 'About', self.show_about),
+                ('Action', None, '_Action'),
+                ('Mark as read all', None, '_Mark as read all', None, 'About', self.mark_as_read_all),
                 ]
         ag.add_actions(actions)
         self.ui = gtk.UIManager()
@@ -459,6 +467,14 @@ class News:
         else:
             html = html.replace("%error%", '')
         self.webview.load_string(html, "text/html", "utf-8", "valid_link")
+
+    def mark_as_read_all(self, action):
+        urls = [row['id'] for row in self.query.entries['items']]
+        self.google_reader.mark_as_read(urls, True)
+        if Preferences.use_emailed_as_advanced_read:
+            self.google_reader.mark_as_emailed(urls, True)
+        if self.query.has_next():
+            self.title_changed("next#", None, None)
 
 
 def asynchronous_gtk_message(fun):
