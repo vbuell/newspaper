@@ -119,7 +119,7 @@ class GoogleReader(object):
             option = 'a'
         else:
             option = 'r'
-        if isinstance(entryid, collections.Iterable):
+        if not isinstance(entryid, str):
             p = {'i': entryid,
                                       option: ['user/-/state/com.google/%s' % (action)],
                                       'ac': ['edit'],

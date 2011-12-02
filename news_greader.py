@@ -474,7 +474,8 @@ class News:
         if Preferences.use_emailed_as_advanced_read:
             self.google_reader.mark_as_emailed(urls, True)
         if self.query.has_next():
-            self.title_changed("next#", None, None)
+            logging.debug("Mark as read all")
+            self.title_changed(None, None, "next#")
 
 
 def asynchronous_gtk_message(fun):
