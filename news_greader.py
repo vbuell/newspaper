@@ -161,8 +161,8 @@ class SearchQuery(Query):
         return entries
 
     def has_next(self):
-        logging.info("" + str(len(self.entries_ids)) + " >= " + str(self.page * self.page_size))
-        return len(self.entries_ids) >= self.page * self.page_size
+        logging.info("" + str(len(self.entries_ids)) + " > " + str(self.page * self.page_size))
+        return len(self.entries_ids) > self.page * self.page_size
 
 class News:
 
