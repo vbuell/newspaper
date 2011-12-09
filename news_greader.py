@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import Queue
 
 import os
 import datetime
@@ -10,6 +11,9 @@ from optparse import OptionParser
 from datetime import date
 
 import pygtk
+import thread
+import time
+
 pygtk.require('2.0')
 import gtk
 import gconf
@@ -167,6 +171,9 @@ class SearchQuery(Query):
 class News:
 
     def __init__(self):
+        self.message_queue = Queue.Queue()
+        self.quit = False
+
         Preferences.load()
 
         self.create_main_window()
@@ -199,6 +206,17 @@ class News:
     def title_changed(self, widget, frame, title):
         if title is None or "#" not in title:
             return
+        self.message_queue.put(title)
+
+    def run(self):
+        while not self.quit:
+            if not self.message_queue.empty():
+                print "Waiting....."
+                msg = self.message_queue.get()
+                self.command_process(msg)
+            gtk.main_iteration()
+
+    def command_process(self, title):
         logging.debug("COMMAND: " + str(title))
         command = title[:title.find("#")]
         rest = title[title.find("#")+1:]
@@ -488,6 +506,21 @@ def asynchronous_gtk_message(fun):
 
     return fun2
 
+def synchronous_gtk_message(fun):
+
+    class NoResult: pass
+
+    def worker((R, function, args, kwargs)):
+        R.result = apply(function, args, kwargs)
+
+    def fun2(*args, **kwargs):
+        class R: result = NoResult
+        gobject.idle_add(callable=worker, user_data=(R, fun, args, kwargs))
+        while R.result is NoResult: time.sleep(0.01)
+        return R.result
+
+    return fun2
+
 
 if __name__ == "__main__":
 
@@ -505,5 +538,11 @@ if __name__ == "__main__":
     if args[1:]:
         Preferences.keywords = ' '.join(args[1:])
 
+#    gtk.gdk.threads_init()
+
     news = News()
-    gtk.main()
+#    thread.start_new_thread(gtk.main, ())
+#    news = synchronous_gtk_message(News)()
+    news.run()
+#
+#    gtk.main()
