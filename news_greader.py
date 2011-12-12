@@ -24,7 +24,7 @@ import webbrowser
 
 from googlereaderapi import GoogleReader
 
-VERSION = "0.91"
+VERSION = "0.93"
 
 
 class Preferences:
@@ -210,11 +210,9 @@ class News:
 
     def run(self):
         while not self.quit:
-            if not self.message_queue.empty():
-                print "Waiting....."
-                msg = self.message_queue.get()
-                self.command_process(msg)
-            gtk.main_iteration()
+            msg = self.message_queue.get()
+            print "Got message:", msg
+            self.command_process(msg)
 
     def command_process(self, title):
         logging.debug("COMMAND: " + str(title))
@@ -238,14 +236,17 @@ class News:
                 html_feed_page = self.return_entries_of_feed(chunks[0], continuation=chunks[1], from_past_to_now=Preferences.reverse)
             else:
                 html_feed_page = self.return_entries_of_feed(rest, from_past_to_now=Preferences.reverse)
-            self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
+            self.render_html(html_feed_page)
         elif title.startswith("search#"):
             self.query = SearchQuery(self.google_reader, rest)
-            entries = self.query.next()
-            while self.query.has_next() and not entries['items']:
+            if self.query.entries_ids:
                 entries = self.query.next()
-            html_feed_page = self.render_as_html(entries, has_next=self.query.has_next())
-            self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
+                while self.query.has_next() and not entries['items']:
+                    entries = self.query.next()
+                html_feed_page = self.render_as_html(entries, has_next=self.query.has_next())
+                self.render_html(html_feed_page)
+            else:
+                asynchronous_gtk_message(self.search_unread)(None, True)
         elif title.startswith("login#"):
             Preferences.greader_login = rest[:rest.find("#")]
             Preferences.greader_pass = rest[rest.find("#")+1:]
@@ -259,7 +260,24 @@ class News:
             while self.query.has_next() and not entries['items']:
                 entries = self.query.next()
             html_feed_page = self.render_as_html(entries, has_next=self.query.has_next())
-            self.webview.load_string(html_feed_page, "text/html", "utf-8", "valid_link")
+            self.render_html(html_feed_page)
+
+    def search_unread(self, action, error=None):
+        f = open('./web/search.html', 'r')
+        html = f.read()
+        if error:
+            html = html.replace("%error%", '<div id="login_error" class="hidden"><strong>Your query returned no entries.</strong><br /></div>')
+        else:
+            html = html.replace("%error%", '')
+        self.webview.load_string(html, "text/html", "utf-8", "valid_link")
+
+    def render_html(self, html):
+#        f = open("./out_debug.html", "w")
+#        f.write(html)
+#        f.close()
+        # Fix for freezes
+        html = html.replace("<iframe", "<ishame")
+        asynchronous_gtk_message(self.webview.load_string)(html, "text/html", "utf-8", "http://ya.ru")
 
     def web_send(self, msg):
         if msg:
@@ -287,6 +305,7 @@ class News:
                 </menu>
                 <menu action='Action'>
                  <menuitem action='Mark as read all'/>
+                 <menuitem action='Search unread articles'/>
                 </menu>
                </menubar>
               </ui>"""
@@ -296,7 +315,8 @@ class News:
                 ('HelpMenu', None, '_Help'),
                 ('About', gtk.STOCK_ABOUT, '_About', None, 'About', self.show_about),
                 ('Action', None, '_Action'),
-                ('Mark as read all', None, '_Mark as read all', None, 'About', self.mark_as_read_all),
+                ('Mark as read all', None, '_Mark as read all', '<Control><Shift>a', 'About', self.mark_as_read_all),
+                ('Search unread articles', None, '_Search unread articles', '<Control>s', 'Search unread articles', self.search_unread),
                 ]
         ag.add_actions(actions)
         self.ui = gtk.UIManager()
@@ -495,6 +515,12 @@ class News:
             logging.debug("Mark as read all")
             self.title_changed(None, None, "next#")
 
+    def read_filters(self, html):
+        f = open("./adblock.filter", "r")
+        filters = f.readlines()
+        f.close()
+        return filters
+
 
 def asynchronous_gtk_message(fun):
 
@@ -538,11 +564,9 @@ if __name__ == "__main__":
     if args[1:]:
         Preferences.keywords = ' '.join(args[1:])
 
-#    gtk.gdk.threads_init()
+    gtk.gdk.threads_init()
 
     news = News()
-#    thread.start_new_thread(gtk.main, ())
-#    news = synchronous_gtk_message(News)()
-    news.run()
-#
-#    gtk.main()
+    thread.start_new_thread(news.run, ())
+
+    gtk.main()
