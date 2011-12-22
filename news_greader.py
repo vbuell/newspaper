@@ -277,7 +277,7 @@ class News:
 #        f.close()
         # Fix for freezes
         html = html.replace("<iframe", "<ishame")
-        asynchronous_gtk_message(self.webview.load_string)(html, "text/html", "utf-8", "http://ya.ru")
+        asynchronous_gtk_message(self.webview.load_string)(html, "text/html", "utf-8", "")
 
     def web_send(self, msg):
         if msg:
