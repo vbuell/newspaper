@@ -141,6 +141,22 @@
 
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.min.js"></script>
 
+    <script type="text/javascript">
+
+        function send(msg) {
+            document.title = "null";
+            document.title = msg;
+        }
+
+        $(document).ready(function() {
+            $('a.search').click(function(e) {
+                if ($(this).attr('href')) {
+                    send("search#" + $(this).attr('href'));
+                }
+            });
+        });
+    </script>
+
 </head>
 <body class="login">
 <div id="login">
@@ -157,6 +173,8 @@
             <input type="submit" name="wp-submit" id="wp-submit" class="button-primary" tabindex="100"/>
         </p>
     </form>
+
+    %history%
 
     <script type="text/javascript">
         function wp_attempt_focus() {

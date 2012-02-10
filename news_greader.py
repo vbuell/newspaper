@@ -37,6 +37,7 @@ class Preferences:
     KEY_WINDOW_HEIGHT = ROOT_DIR + '/ui_height'
     KEY_GREADER_LOGIN = ROOT_DIR + '/greader_login'
     KEY_GREADER_PASS = ROOT_DIR + '/greader_pass'
+    KEY_SEARCH_HISTORY = ROOT_DIR + '/search_history'
 
     windowWidth = 700
     windowHeight = 800
@@ -47,6 +48,7 @@ class Preferences:
     reverse = False
     keywords = None
     use_emailed_as_advanced_read = True
+    search_history = []
 
     @staticmethod
     def load():
@@ -68,6 +70,9 @@ class Preferences:
             gconf_value = gconf_client.get_string(Preferences.KEY_GREADER_PASS)
             if gconf_value:
                 Preferences.greader_pass = gconf_value
+            gconf_value = gconf_client.get_string(Preferences.KEY_SEARCH_HISTORY)
+            if gconf_value:
+                Preferences.search_history = gconf_value.split(";")
 
             logging.debug("Loaded preferences from gconf: " + str(Preferences.__dict__))
         except Exception, e:
@@ -79,6 +84,7 @@ class Preferences:
         Preferences.gconf_client.set_string(Preferences.KEY_WINDOW_HEIGHT, str(Preferences.windowHeight))
         Preferences.gconf_client.set_string(Preferences.KEY_GREADER_LOGIN, str(Preferences.greader_login))
         Preferences.gconf_client.set_string(Preferences.KEY_GREADER_PASS, str(Preferences.greader_pass))
+        Preferences.gconf_client.set_string(Preferences.KEY_SEARCH_HISTORY, ";".join(Preferences.search_history))
 
         logging.debug("Preferences saved.")
 
@@ -238,6 +244,8 @@ class News:
                 html_feed_page = self.return_entries_of_feed(rest, from_past_to_now=Preferences.reverse)
             self.render_html(html_feed_page)
         elif title.startswith("search#"):
+            if rest not in Preferences.search_history:
+                Preferences.search_history.append(rest)
             self.query = SearchQuery(self.google_reader, rest)
             if self.query.entries_ids:
                 entries = self.query.next()
@@ -269,6 +277,8 @@ class News:
             html = html.replace("%error%", '<div id="login_error" class="hidden"><strong>Your query returned no entries.</strong><br /></div>')
         else:
             html = html.replace("%error%", '')
+
+        html = html.replace("%history%", "".join(['<p><a class="search" style="font-weight: bold; " href="'+history+'">' + history + '</a>' for history in Preferences.search_history]))
         self.webview.load_string(html, "text/html", "utf-8", "valid_link")
 
     def render_html(self, html):
