@@ -48,6 +48,7 @@ class Preferences:
     reverse = False
     keywords = None
     use_emailed_as_advanced_read = True
+    page_size = 20
     search_history = []
 
     @staticmethod
@@ -246,7 +247,7 @@ class News:
         elif title.startswith("search#"):
             if rest not in Preferences.search_history:
                 Preferences.search_history.append(rest)
-            self.query = SearchQuery(self.google_reader, rest)
+            self.query = SearchQuery(self.google_reader, rest, paging_size=Preferences.page_size)
             if self.query.entries_ids:
                 entries = self.query.next()
                 while self.query.has_next() and not entries['items']:
@@ -453,9 +454,9 @@ class News:
     def return_entries_of_feed(self, id_feed, continuation=None, from_past_to_now=False):
         """Obtains the entries of the selected feed"""
         if id_feed == "default":
-            entries = self.google_reader.get_reading_list(from_past_to_now=from_past_to_now, continuation=continuation)
+            entries = self.google_reader.get_reading_list(from_past_to_now=from_past_to_now, continuation=continuation, number_of_items=Preferences.page_size)
         else:
-            entries = self.google_reader.get_entries(id_feed, from_past_to_now=from_past_to_now, continuation=continuation)
+            entries = self.google_reader.get_entries(id_feed, from_past_to_now=from_past_to_now, continuation=continuation, number_of_items=Preferences.page_size)
 
         return self.render_as_html(entries, id_feed, has_next=True)
 
@@ -567,10 +568,13 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-r", "--reverse", dest="reverse", action="store_true",
                       help="from past to now", default=False)
+    parser.add_option("-n", "--page_size", dest="page_size",
+                      help="page size", default=20)
 
     (options, args) = parser.parse_args(args=sys.argv)
 
     Preferences.reverse = options.reverse
+    Preferences.page_size = int(options.page_size)
     if args[1:]:
         Preferences.keywords = ' '.join(args[1:])
 
