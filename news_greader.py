@@ -131,7 +131,7 @@ class SearchQuery(Query):
     def __init__(self, google_reader, keywords, paging_size=20):
         self.keywords = keywords
         self.google_reader = google_reader
-        self.entries_ids = self.google_reader.search(keywords, limit=10000)
+        self.entries_ids = self.google_reader.search(keywords, limit=2000)
         self.page = 0
         self.page_size = paging_size
         self.entries = None
