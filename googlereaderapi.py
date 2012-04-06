@@ -81,7 +81,7 @@ class Article(object):
 
 class GoogleReader(object):
     def __init__(self, username, password):
-        self.client = 'news'
+        self.client = 'scroll'
         self.username = username
         self.email = username
         self.password = password
@@ -185,7 +185,7 @@ class GoogleReader(object):
         else:
             r = 'd'
         get_data = urllib.urlencode({'n': str(number_of_items),
-                                     'ck': int(time.time()),
+                                     'ck': self.getTimestamp(),
                                      'r': r,
                                      'client': self.client})
         # Doing GET
@@ -217,7 +217,7 @@ class GoogleReader(object):
         else:
             r = 'd'
         map = {'n': str(number_of_items),
-                                     'ck': int(time.time()),
+                                     'ck': self.getTimestamp(),
                                      'r': r,
                                      'client': self.client,
                                      'xt': 'user/-/state/com.google/read'}
@@ -240,7 +240,7 @@ class GoogleReader(object):
         else:
             r = 'd'
         map = {'n': str(number_of_items),
-                                     'ck': int(time.time()),
+                                     'ck': self.getTimestamp(),
                                      'r': r,
                                      'client': self.client,
                                      'xt': 'user/-/state/com.google/read'}
@@ -260,7 +260,7 @@ class GoogleReader(object):
         reader_base_url = 'http://www.google.com/reader/api/0/unread-count?%s'
         reader_req_data = urllib.urlencode({'all': 'true',
                                             'output': 'json',
-                                            'ck': int(time.time()),
+                                            'ck': self.getTimestamp(),
                                             'client': self.client})
         reader_url = reader_base_url % (reader_req_data)
         reader_req = urllib2.Request(reader_url, None, self.header)
@@ -273,7 +273,7 @@ class GoogleReader(object):
 
     def get_subscriptions(self):
         url = 'http://www.google.com/reader/api/0/subscription/list?%s'
-        get_data = urllib.urlencode({'ck': int(time.time()),
+        get_data = urllib.urlencode({'ck': self.getTimestamp(),
                                      'output': 'json',
                                      'client': self.client})
         # Doing GET
@@ -287,23 +287,27 @@ class GoogleReader(object):
         return None
 
     def search(self, keywords, limit=1000):
-        # Search
-        url = 'http://www.google.com/reader/api/0/search/items/ids?%s'
-        get_data = urllib.urlencode({'q': keywords,
-                                     'num': limit,
-                                     'output': 'json',
-                                     'ck': int(time.time()),
-                                     'client': self.client})
-        # Doing GET
-        reader_url = url % get_data
-        request = urllib2.Request(reader_url, None, self.header)
-        f = urllib2.urlopen(request)
-        entryids = []
-        if f:
-            obj = simplejson.loads(f.read())
-            entryids = [c['id'] for c in obj['results']]
+        try:
+            # Search
+            url = 'http://www.google.com/reader/api/0/search/items/ids?%s'
+            get_data = urllib.urlencode({'q': keywords,
+                                         'num': limit,
+                                         'output': 'json',
+                                         'ck': self.getTimestamp(),
+                                         'client': self.client})
+            # Doing GET
+            reader_url = url % get_data
+            logging.info("url: " + reader_url)
+            request = urllib2.Request(reader_url, None, self.header)
+            f = urllib2.urlopen(request)
+            entryids = []
+            if f:
+                obj = simplejson.loads(f.read())
+                entryids = [c['id'] for c in obj['results']]
 
-        logging.info("googlereaderapi: Search result: " + str(len(entryids)))
+            logging.info("googlereaderapi: Search result: " + str(len(entryids)))
+        except urllib2.HTTPError, error:
+            print "ERROR: ", error.read()
 
         return entryids
 
@@ -316,7 +320,7 @@ class GoogleReader(object):
         url = 'http://www.google.com/reader/api/0/stream/items/contents?%s'
         get_data = urllib.urlencode({'likes': 'false',
                                      'comments': 'false',
-                                     'ck': int(time.time()),
+                                     'ck': self.getTimestamp(),
                                      'client': self.client})
         reader_url = url % get_data
         request = urllib2.Request(reader_url, post_data, self.header)
@@ -324,3 +328,6 @@ class GoogleReader(object):
         obj = simplejson.loads(f.read())
 
         return obj
+
+    def getTimestamp(self):
+        return int(time.time()) * 1000

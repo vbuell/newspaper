@@ -18,13 +18,23 @@ pygtk.require('2.0')
 import gtk
 import gconf
 import gobject
-import webkit
+try:
+    import webkit
+    webkit_found = True
+except:
+    pass
 import pango
 import webbrowser
+try:
+    import gtkmozembed
+    gtkmozembed_found = True
+except:
+    pass
+
 
 from googlereaderapi import GoogleReader
 
-VERSION = "0.93"
+VERSION = "0.95"
 
 
 class Preferences:
@@ -50,6 +60,7 @@ class Preferences:
     use_emailed_as_advanced_read = True
     page_size = 20
     search_history = []
+    engine = 'webkit'
 
     @staticmethod
     def load():
@@ -197,9 +208,9 @@ class News:
             self.populate_feeds()
             if Preferences.keywords:
                 print "Keywords", Preferences.keywords
-                self.title_changed(None, None, "search#" + Preferences.keywords)
+                self.message_queue.put("search#" + Preferences.keywords)
             else:
-                self.title_changed(None, None, "tag#default")
+                self.message_queue.put("tag#default")
         except urllib2.HTTPError:
             logging.exception("Forbidden")
             self.show_login(True)
@@ -210,16 +221,25 @@ class News:
         gtk.main_quit()
         return False
 
-    def title_changed(self, widget, frame, title):
+    def title_changed_webkit(self, widget, frame, title):
+        if title is None or "#" not in title:
+            return
+        self.message_queue.put(title)
+
+    def title_changed_mozilla(self, *args):
+        title = self.webview.get_title()
         if title is None or "#" not in title:
             return
         self.message_queue.put(title)
 
     def run(self):
-        while not self.quit:
-            msg = self.message_queue.get()
-            print "Got message:", msg
-            self.command_process(msg)
+        try:
+            while not self.quit:
+                msg = self.message_queue.get()
+                print "Got message:", msg
+                self.command_process(msg)
+        except:
+            logging.exception("Exception in message consumer thread")
 
     def command_process(self, title):
         logging.debug("COMMAND: " + str(title))
@@ -280,15 +300,18 @@ class News:
             html = html.replace("%error%", '')
 
         html = html.replace("%history%", "".join(['<p><a class="search" style="font-weight: bold; " href="'+history+'">' + history + '</a>' for history in Preferences.search_history]))
-        self.webview.load_string(html, "text/html", "utf-8", "valid_link")
+        self.render_html(html)
 
     def render_html(self, html):
-#        f = open("./out_debug.html", "w")
-#        f.write(html)
-#        f.close()
+        f = open("./out_debug.html", "w")
+        f.write(html)
+        f.close()
         # Fix for freezes
         html = html.replace("<iframe", "<ishame")
-        asynchronous_gtk_message(self.webview.load_string)(html, "text/html", "utf-8", "")
+        if isinstance(self.webview, webkit.WebView):
+            asynchronous_gtk_message(self.webview.load_string)(html, "text/html", "utf-8", "")
+        else:
+            asynchronous_gtk_message(self.webview.render_data)(html, long(len(html)), 'file:///', "text/html")
 
     def web_send(self, msg):
         if msg:
@@ -335,6 +358,27 @@ class News:
         self.ui.add_ui_from_string(ui_string)
         self.window.add_accel_group(self.ui.get_accel_group())
 
+    def create_mozilla_control(self):
+        webview = gtkmozembed.MozEmbed()
+        print ">>>>>>>>>>>>>> MozEmbed::::", str(webview.__dict__)
+#        webview.set_full_content_zoom(True)
+#        webview.connect_after("populate-popup", self.create_webview_popup)
+        # Open in new browser handler (this intercepts all requests)
+#        webview.connect("hovering-over-link", self.hover_link)
+        webview.connect('title', self.title_changed_mozilla)
+
+        return webview
+
+    def create_webkit_control(self):
+        webview = webkit.WebView()
+        webview.set_full_content_zoom(True)
+        webview.connect_after("populate-popup", self.create_webview_popup)
+        # Open in new browser handler (this intercepts all requests)
+        webview.connect("hovering-over-link", self.hover_link)
+        webview.connect('title-changed', self.title_changed_webkit)
+
+        return webview
+
     def create_main_window(self):
         """Creates the main window with all it's widgets"""
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -351,12 +395,13 @@ class News:
 
         self.scrolled_window3 = gtk.ScrolledWindow()
         self.scrolled_window3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.webview = webkit.WebView()
-        self.webview.set_full_content_zoom(True)
-        self.webview.connect_after("populate-popup", self.create_webview_popup)
-        # Open in new browser handler (this intercepts all requests)
-        self.webview.connect("hovering-over-link", self.hover_link)
-        self.webview.connect('title-changed', self.title_changed)
+
+        if Preferences.engine == 'webkit':
+            self.webview = self.create_webkit_control()
+        elif Preferences.engine == 'mozilla':
+            self.webview = self.create_mozilla_control()
+        else:
+            raise Exception('Illegal engine option.')
 
         self.scrolled_window3.add(self.webview)
 
@@ -515,7 +560,7 @@ class News:
             html = html.replace("%error%", '<div id="login_error" class="hidden"><strong>ERROR</strong>: Invalid email or username.<br /></div>')
         else:
             html = html.replace("%error%", '')
-        self.webview.load_string(html, "text/html", "utf-8", "valid_link")
+        self.render_html(html)
 
     def mark_as_read_all(self, action):
         urls = [row['id'] for row in self.query.entries['items']]
@@ -524,7 +569,7 @@ class News:
             self.google_reader.mark_as_emailed(urls, True)
         if self.query.has_next():
             logging.debug("Mark as read all")
-            self.title_changed(None, None, "next#")
+            self.message_queue.put("next#")
 
     def read_filters(self, html):
         f = open("./adblock.filter", "r")
@@ -570,13 +615,19 @@ if __name__ == "__main__":
                       help="from past to now", default=False)
     parser.add_option("-n", "--page_size", dest="page_size",
                       help="page size", default=20)
+    parser.add_option("-e", "--engine", dest="engine",
+        help="HTML layout engine. Can be either (webkit | mozilla)", default='webkit')
 
     (options, args) = parser.parse_args(args=sys.argv)
+
+    logging.debug("Webkit searching... : " + str(webkit_found))
+    logging.debug("GtkMozEmbed searching... : " + str(gtkmozembed_found))
 
     Preferences.reverse = options.reverse
     Preferences.page_size = int(options.page_size)
     if args[1:]:
         Preferences.keywords = ' '.join(args[1:])
+    Preferences.engine = options.engine
 
     gtk.gdk.threads_init()
 
